@@ -49,7 +49,9 @@ exports.create = async (req, res, next) => {
 exports.getOne = async (req, res, next) => {
   try {
     const { task, role } = await service.loadTaskForUser(req.params.id, req.user);
-    res.status(200).json({ task: await service.toSingleDto(task, role) });
+    res.status(200).json({
+      task: await service.toSingleDto(task, role, { withShares: true }),
+    });
   } catch (err) {
     next(err);
   }

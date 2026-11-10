@@ -17,12 +17,16 @@ const ALLOWED = {
   edit: ['owner', 'editor'],
   status: ['owner', 'editor', 'assignee'],
   delete: ['owner'],
+  assign: ['owner', 'editor'], // giao việc / đổi người phụ trách
+  share: ['owner'], // chia sẻ và quản lý quyền truy cập
 };
 
 const DENIED_MESSAGE = {
   edit: 'Bạn không có quyền chỉnh sửa công việc này',
   status: 'Bạn không có quyền đổi trạng thái công việc này',
   delete: 'Chỉ người tạo mới được xóa công việc',
+  assign: 'Bạn không có quyền giao việc cho công việc này',
+  share: 'Chỉ người tạo mới được quản lý chia sẻ công việc',
 };
 
 const same = (a, b) => String(a) === String(b);
@@ -101,9 +105,28 @@ function toDto(task, userMap, role) {
   };
 }
 
-async function toSingleDto(task, role) {
+// Danh sách chia sẻ của một công việc (kèm thông tin người được chia sẻ)
+async function toShareDtos(taskId) {
+  const shares = await TaskShare.find({ taskId: String(taskId) });
+  const ids = shares.map((s) => String(s.userId));
+  const users = ids.length ? await User.find({ _id: { $in: ids } }) : [];
+  const map = new Map(users.map((u) => [String(u._id), userDto(u)]));
+  return shares
+    .map((s) => ({
+      userId: String(s.userId),
+      user: map.get(String(s.userId)) || null,
+      permission: s.permission,
+      sharedAt: s.createdAt,
+    }))
+    .filter((s) => s.user);
+}
+
+// withShares: chỉ owner mới nhận danh sách chia sẻ
+async function toSingleDto(task, role, { withShares = false } = {}) {
   const userMap = await buildUserMap([task]);
-  return toDto(task, userMap, role);
+  const dto = toDto(task, userMap, role);
+  if (withShares && role === 'owner') dto.shares = await toShareDtos(task._id);
+  return dto;
 }
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -170,5 +193,7 @@ module.exports = {
   requireAction,
   loadTaskForUser,
   toSingleDto,
+  toShareDtos,
+  userDto,
   listTasks,
 };
