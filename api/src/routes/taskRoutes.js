@@ -6,6 +6,8 @@ const v = require('../validators/taskValidator');
 const av = require('../validators/assignmentValidator');
 const assignment = require('../controllers/assignmentController');
 const share = require('../controllers/taskShareController');
+const emailLog = require('../controllers/emailLogController');
+const activity = require('../controllers/activityController');
 
 const router = express.Router();
 
@@ -18,6 +20,10 @@ router.get('/:id', controller.getOne);
 router.put('/:id', validate(v.validateUpdateTask), controller.update);
 router.patch('/:id/status', validate(v.validateStatus), controller.updateStatus);
 router.delete('/:id', controller.remove);
+
+// Nhóm D - lịch sử hoạt động và lịch sử email
+router.get('/:id/activities', activity.list);
+router.get('/:id/email-logs', emailLog.listForTask);
 
 // Nhóm C - giao việc
 router.get('/:id/assignees', assignment.list);

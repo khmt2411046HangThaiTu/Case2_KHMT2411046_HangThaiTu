@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const HttpError = require('../utils/httpError');
 const service = require('../services/taskService');
+const notify = require('../services/notificationService');
 
 const same = (a, b) => String(a) === String(b);
 
@@ -47,6 +48,7 @@ exports.replace = async (req, res, next) => {
       }
     }
 
+    const old = (task.assigneeIds || []).map(String);
     task.assigneeIds = ids;
     task.primaryAssigneeId = pickPrimary(
       req.body.primaryAssigneeId,
@@ -54,6 +56,17 @@ exports.replace = async (req, res, next) => {
       ids
     );
     await task.save();
+
+    const added = ids.filter((i) => !old.includes(i));
+    const removed = old.filter((i) => !ids.includes(i));
+    if (added.length || removed.length) {
+      await notify.logActivity(task._id, req.user._id, 'assign', {
+        added,
+        removed,
+        primary: task.primaryAssigneeId ? String(task.primaryAssigneeId) : null,
+      });
+    }
+    if (added.length) await notify.notifyAssigned(task, req.user, added);
     res.status(200).json(await assigneeResponse(task, role));
   } catch (err) {
     next(err);
@@ -74,6 +87,7 @@ exports.removeOne = async (req, res, next) => {
     task.assigneeIds = rest;
     task.primaryAssigneeId = pickPrimary(null, same(task.primaryAssigneeId, target) ? null : task.primaryAssigneeId, rest);
     await task.save();
+    await notify.logActivity(task._id, req.user._id, 'unassign', { userId: String(target) });
     res.status(200).json(await assigneeResponse(task, role));
   } catch (err) {
     next(err);

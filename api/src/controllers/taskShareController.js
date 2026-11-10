@@ -3,6 +3,7 @@ const TaskShare = require('../models/TaskShare');
 const User = require('../models/User');
 const HttpError = require('../utils/httpError');
 const service = require('../services/taskService');
+const notify = require('../services/notificationService');
 
 const same = (a, b) => String(a) === String(b);
 
@@ -57,7 +58,9 @@ exports.create = async (req, res, next) => {
       userId: String(target._id),
     });
     let status = 200;
+    let changed = true;
     if (share) {
+      changed = share.permission !== permission;
       share.permission = permission;
       await share.save();
     } else {
@@ -68,6 +71,13 @@ exports.create = async (req, res, next) => {
         sharedBy: req.user._id,
       });
       status = 201;
+    }
+    if (changed) {
+      await notify.logActivity(task._id, req.user._id, 'share', {
+        userId: String(target._id),
+        permission,
+      });
+      await notify.notifyShared(task, req.user, target._id, permission);
     }
     await respond(res, task, status);
   } catch (err) {
@@ -80,8 +90,16 @@ exports.update = async (req, res, next) => {
   try {
     const task = await loadAsOwner(req);
     const share = await findShare(task, req.params.userId);
+    const changed = share.permission !== req.body.permission;
     share.permission = req.body.permission;
     await share.save();
+    if (changed) {
+      await notify.logActivity(task._id, req.user._id, 'share_permission', {
+        userId: String(req.params.userId),
+        permission: share.permission,
+      });
+      await notify.notifyShared(task, req.user, req.params.userId, share.permission);
+    }
     await respond(res, task);
   } catch (err) {
     next(err);
@@ -94,6 +112,9 @@ exports.remove = async (req, res, next) => {
     const task = await loadAsOwner(req);
     const share = await findShare(task, req.params.userId);
     await share.deleteOne();
+    await notify.logActivity(task._id, req.user._id, 'unshare', {
+      userId: String(req.params.userId),
+    });
     await respond(res, task);
   } catch (err) {
     next(err);

@@ -73,6 +73,9 @@ const stub = (rel, exp) => {
 stub('../src/models/User.js', FakeUser);
 stub('../src/models/Task.js', FakeTask);
 stub('../src/models/TaskShare.js', FakeShare);
+for (const m of ['Notification', 'EmailLog', 'TaskActivity']) {
+  stub(`../src/models/${m}.js`, makeModel());
+}
 
 const app = require('../src/app');
 let server;

@@ -28,6 +28,8 @@ const taskSchema = new Schema(
     dueDate: { type: Date, default: null },
     priority: { type: String, enum: PRIORITIES, default: 'medium' },
     status: { type: String, enum: STATUSES, default: 'todo' },
+    // Đã gửi nhắc việc trước hạn chưa (đặt lại khi đổi hạn)
+    reminderSentAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
@@ -37,6 +39,7 @@ taskSchema.set('toJSON', {
     ret.id = ret._id.toString();
     delete ret._id;
     delete ret.__v;
+    delete ret.reminderSentAt;
     return ret;
   },
 });

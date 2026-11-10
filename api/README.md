@@ -66,3 +66,32 @@ Không có quyền xem thì trả 404, có quyền xem nhưng thiếu quyền th
 - `POST shares` body: `{ "userId": "..." }` hoặc `{ "email": "..." }`, kèm `"permission": "viewer" | "editor"` (mặc định viewer). Không chia sẻ cho chính chủ.
 - `GET /tasks/:id` trả thêm `shares` khi người gọi là owner.
 - Thu hồi chia sẻ / bỏ giao việc có hiệu lực ngay: người đó nhận 404 khi xem công việc.
+
+## Nhóm D - Thông báo và email (cần Bearer token)
+
+| Method | Endpoint | Chức năng | Quyền |
+|---|---|---|---|
+| GET | `/notifications?unread=true&limit=&skip=` | Danh sách thông báo của tôi (mới nhất trước) + `unreadCount` | đăng nhập |
+| GET | `/notifications/unread-count` | Số thông báo chưa đọc | đăng nhập |
+| PATCH | `/notifications/:id/read` | Đánh dấu một thông báo đã đọc | chủ thông báo |
+| PATCH | `/notifications/read-all` | Đánh dấu tất cả đã đọc | đăng nhập |
+| GET | `/tasks/:id/activities` | Lịch sử hoạt động của công việc | có quyền xem |
+| GET | `/tasks/:id/email-logs` | Lịch sử gửi email (sent/failed/pending) | chỉ owner |
+| POST | `/email-logs/:id/retry` | Gửi lại email thất bại (tối đa 3 lần gửi) | chỉ owner |
+| GET | `/users/search?q=` | Tìm người dùng (giống `/users?q=`) | đăng nhập |
+
+**Khi nào có thông báo / email** (không bao giờ gửi cho chính người thực hiện):
+
+| Sự kiện | Trong ứng dụng | Email |
+|---|---|---|
+| Được giao việc (chỉ người mới thêm) | có | có |
+| Được chia sẻ hoặc đổi quyền | có | có |
+| Đổi hạn, tên hoặc mức ưu tiên | có (owner, người được giao, người được chia sẻ) | có |
+| Đổi trạng thái | có | không |
+| Hoàn thành công việc | có | có |
+| Sắp đến hạn (mặc định 24 giờ, mỗi việc nhắc 1 lần, đổi hạn thì nhắc lại) | có | có |
+
+Cấu hình SMTP trong `.env` (xem `.env.example`). Email gửi ngầm sau khi API đã trả kết quả; mỗi email có một bản ghi
+`email_logs` với `status` pending/sent/failed, `attempts`, `errorMessage`. Chưa cấu hình SMTP thì email ghi `failed`
+("SMTP chưa được cấu hình") và gửi lại được sau khi cấu hình. Tác vụ nhắc việc chạy trong tiến trình server (`setInterval`).
+Dữ liệu mới: collection `notifications`, `email_logs`, `task_activities`.

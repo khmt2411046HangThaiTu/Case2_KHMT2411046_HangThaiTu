@@ -2,9 +2,12 @@ const Task = require('../models/Task');
 const TaskShare = require('../models/TaskShare');
 const HttpError = require('../utils/httpError');
 const service = require('../services/taskService');
+const notify = require('../services/notificationService');
 
 // '' hoặc null -> null (xóa ngày); chuỗi ISO -> Date
 const toDate = (v) => (v === null || v === '' ? null : new Date(v));
+
+const { fmtDate } = require('../utils/emailTemplates');
 
 const checkDateOrder = (start, due) => {
   if (start && due && due < start) {
@@ -39,6 +42,7 @@ exports.create = async (req, res, next) => {
     checkDateOrder(data.startDate, data.dueDate);
 
     const task = await Task.create(data);
+    await notify.logActivity(task._id, req.user._id, 'create', { title: task.title });
     res.status(201).json({ task: await service.toSingleDto(task, 'owner') });
   } catch (err) {
     next(err);
@@ -64,6 +68,11 @@ exports.update = async (req, res, next) => {
     service.requireAction(role, 'edit');
 
     const b = req.body;
+    const before = {
+      title: task.title,
+      priority: task.priority,
+      due: task.dueDate ? new Date(task.dueDate).getTime() : null,
+    };
     if (b.title !== undefined) task.title = b.title.trim();
     if (b.description !== undefined) task.description = (b.description || '').trim();
     if (b.priority !== undefined) task.priority = b.priority;
@@ -72,7 +81,22 @@ exports.update = async (req, res, next) => {
     if (b.dueDate !== undefined) task.dueDate = toDate(b.dueDate);
     checkDateOrder(task.startDate, task.dueDate);
 
+    // Các thay đổi quan trọng cần thông báo
+    const changes = [];
+    const dueNow = task.dueDate ? new Date(task.dueDate).getTime() : null;
+    if (dueNow !== before.due) {
+      changes.push(`hạn hoàn thành thành ${fmtDate(task.dueDate)}`);
+      task.reminderSentAt = null; // đổi hạn thì nhắc việc lại từ đầu
+    }
+    if (task.title !== before.title) changes.push(`tên thành "${task.title}"`);
+    if (task.priority !== before.priority) changes.push(`mức ưu tiên thành ${task.priority}`);
+
     await task.save();
+    await notify.logActivity(task._id, req.user._id, 'update', {
+      fields: Object.keys(b),
+      changes,
+    });
+    if (changes.length) await notify.notifyUpdated(task, req.user, changes);
     res.status(200).json({ task: await service.toSingleDto(task, role) });
   } catch (err) {
     next(err);
@@ -85,8 +109,16 @@ exports.updateStatus = async (req, res, next) => {
     const { task, role } = await service.loadTaskForUser(req.params.id, req.user);
     service.requireAction(role, 'status');
 
+    const oldStatus = task.status;
     task.status = req.body.status;
     await task.save();
+    if (oldStatus !== task.status) {
+      await notify.logActivity(task._id, req.user._id, 'status_changed', {
+        from: oldStatus,
+        to: task.status,
+      });
+      await notify.notifyStatusChanged(task, req.user, oldStatus);
+    }
     res.status(200).json({ task: await service.toSingleDto(task, role) });
   } catch (err) {
     next(err);

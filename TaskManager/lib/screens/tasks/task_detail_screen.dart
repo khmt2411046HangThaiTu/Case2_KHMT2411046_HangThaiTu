@@ -10,6 +10,7 @@ import '../../widgets/priority_badge.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/user_avatar.dart';
 import 'assign_task_screen.dart';
+import 'email_log_screen.dart';
 import 'task_edit_screen.dart';
 import 'task_sharing_screen.dart';
 
@@ -257,6 +258,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     onPressed: _busy ? null : _share,
                     icon: const Icon(Icons.share_outlined),
                     label: const Text('Chia sẻ'),
+                  ),
+                if (task.role == 'owner')
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => EmailLogScreen(taskId: task.id),
+                      ),
+                    ),
+                    icon: const Icon(Icons.mail_outline),
+                    label: const Text('Lịch sử email'),
                   ),
               ],
             ),

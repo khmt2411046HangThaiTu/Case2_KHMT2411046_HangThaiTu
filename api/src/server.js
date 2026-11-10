@@ -1,6 +1,7 @@
 require('dotenv').config();
 const app = require('./app');
 const connectDatabase = require('./config/database');
+const { startReminderJob } = require('./services/reminderService');
 
 const PORT = process.env.PORT || 3000;
 
@@ -18,6 +19,7 @@ async function start() {
   // 0.0.0.0 để emulator (10.0.2.2) và điện thoại thật cùng truy cập được
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
+    startReminderJob();
   });
 }
 
