@@ -4,6 +4,7 @@ import '../../models/user.dart';
 import '../../services/api_client.dart';
 import '../../services/auth_service.dart';
 import '../../utils/validators.dart';
+import '../statistics/statistics_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -146,6 +147,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 24),
           const Divider(),
+          ListTile(
+            leading: const Icon(Icons.bar_chart),
+            title: const Text('Thống kê công việc'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(builder: (_) => const StatisticsScreen()),
+            ),
+          ),
           ListTile(
             leading: const Icon(Icons.password),
             title: const Text('Đổi mật khẩu'),

@@ -95,3 +95,16 @@ Cấu hình SMTP trong `.env` (xem `.env.example`). Email gửi ngầm sau khi A
 `email_logs` với `status` pending/sent/failed, `attempts`, `errorMessage`. Chưa cấu hình SMTP thì email ghi `failed`
 ("SMTP chưa được cấu hình") và gửi lại được sau khi cấu hình. Tác vụ nhắc việc chạy trong tiến trình server (`setInterval`).
 Dữ liệu mới: collection `notifications`, `email_logs`, `task_activities`.
+
+## Nhóm E - Thống kê (`/api/statistics`, cần Bearer token)
+
+Tính trên các công việc người dùng có quyền truy cập (tạo, được giao, được chia sẻ).
+
+| Method | Endpoint | Kết quả |
+|---|---|---|
+| GET | `/statistics/tasks` | `total`, `todo`, `in_progress`, `completed`, `completionRate` (%), `byPriority`, `byRole` |
+| GET | `/statistics/assignments` | `assignedToMe`, `primaryForMe`, `assignedByMe` (mỗi mục có số theo trạng thái và `active`), `primaryTasks` |
+| GET | `/statistics/deadlines?days=7` | `overdue` / `dueSoon` (tối đa 20 việc, gần hạn nhất trước) kèm `overdueCount`, `dueSoonCount`. `days` từ 1 đến 90 |
+
+Việc đã hoàn thành hoặc không có hạn không tính vào quá hạn / sắp đến hạn.
+Lịch sử hoạt động của công việc: `GET /tasks/:id/activities` (nhóm D).

@@ -9,6 +9,7 @@ import '../../widgets/loading_view.dart';
 import '../../widgets/priority_badge.dart';
 import '../../widgets/status_badge.dart';
 import '../../widgets/user_avatar.dart';
+import 'activity_screen.dart';
 import 'assign_task_screen.dart';
 import 'email_log_screen.dart';
 import 'task_edit_screen.dart';
@@ -287,6 +288,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 ),
               ),
           ],
+          const Divider(height: 32),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => ActivityScreen(taskId: task.id),
+              ),
+            ),
+            icon: const Icon(Icons.history),
+            label: const Text('Lịch sử hoạt động'),
+          ),
           const Divider(height: 32),
           if (task.canChangeStatus) ...[
             Text('Cập nhật trạng thái', style: theme.textTheme.titleSmall),
